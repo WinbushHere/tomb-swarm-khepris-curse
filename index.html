@@ -1348,11 +1348,11 @@ async function loadAllAssets() {
   function makeVO(src) {
     const a = new Audio(src); a.volume = 0.85; return a;
   }
-  window._voLetsGo        = makeVO('assets/music/VO_LetsGO.wav');
-  window._voWrapWounds    = makeVO('assets/music/VO_WrapYourWounds.wav');
-  window._voRelightTorch  = makeVO('assets/music/VO_RelightTorch.wav');
-  window._voGameOver      = makeVO('assets/music/VO_GameOver.wav');
-  window._voYouWin        = makeVO('assets/music/VO_YouWin.wav');
+  window._voLetsGo        = makeVO('assets/music/VO_LetsGO.ogg');
+  window._voWrapWounds    = makeVO('assets/music/VO_WrapYourWounds.ogg');
+  window._voRelightTorch  = makeVO('assets/music/VO_RelightTorch.ogg');
+  window._voGameOver      = makeVO('assets/music/VO_GameOver.ogg');
+  window._voYouWin        = makeVO('assets/music/VO_YouWin.ogg');
   function playVO(vo) {
     if (!vo) return;
     vo.currentTime = 0;
@@ -1827,19 +1827,14 @@ function loop(now) {
 }
 
 // ── Music ──────────────────────────────────────────────────────
-const _musicBass  = new Audio('assets/music/TombSwamMusic-BASS.ogg');
-const _musicSynth = new Audio('assets/music/TombSwamMusic-SYNTH.ogg');
-_musicBass.loop  = true; _musicBass.volume  = 0.5;
-_musicSynth.loop = true; _musicSynth.volume = 0.4;
+const _musicMain = new Audio('assets/music/TombSwamMusic_v2.ogg');
+_musicMain.loop = true; _musicMain.volume = 0.6;
 
 let _musicStarted = false;
 function startMusic() {
   if (_musicStarted) return;
   _musicStarted = true;
-  Promise.all([
-    _musicBass.play(),
-    _musicSynth.play()
-  ]).catch(() => {});
+  _musicMain.play().catch(() => {});
 }
 function updateMusicTension() {}
 
