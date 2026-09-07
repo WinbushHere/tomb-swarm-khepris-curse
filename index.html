@@ -1639,6 +1639,15 @@ function drawAttract() {
   ctx.shadowColor = '#aa6600'; ctx.shadowBlur = 28;
   ctx.fillText('TAP TO ENTER THE TOMB', W / 2, H - 100);
   ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  // Browser notice
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(0, 0, W, 80);
+  ctx.textAlign = 'center'; ctx.font = 'bold 36px "Arial Black", Arial'; ctx.fillStyle = '#ffdd88';
+  ctx.shadowColor = '#000'; ctx.shadowBlur = 8;
+  ctx.fillText('Best played in Chrome or Firefox', W / 2, 30);
+  ctx.font = 'bold 28px Arial'; ctx.fillStyle = '#ffaaaa';
+  ctx.fillText('Safari does not support transparent video', W / 2, 62);
+  ctx.shadowBlur = 0; ctx.globalAlpha = 1;
 }
 
 // ── Draw: tutorial ─────────────────────────────────────────────
