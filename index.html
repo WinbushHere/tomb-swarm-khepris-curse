@@ -373,6 +373,7 @@ class TombStage {
       const dx = ax - p.x, dy = ay - p.y;
       if (Math.sqrt(dx * dx + dy * dy) <= 140) {
         p.collected = true; this._coins += p.amount; gained += p.amount;
+        playCoinSound(p.amount);
       }
     }
     return gained;
@@ -1198,7 +1199,24 @@ const tombStage = new TombStage();
 const aim = { x: W / 2, y: H / 2 };
 
 let hitFlash = 0, hitScale = 1;
-let phase = 'attract', currentWave = 1, totalScore = 0;
+let phase = 'attract', currentWave = 1, totalScore = 0, bestScore = 0;
+
+// ── Coin pickup sound (Web Audio, no extra file needed) ────────
+function playCoinSound(amount) {
+  try {
+    const ac   = getAudioCtx();
+    const freq = amount >= 10 ? 1480 : amount >= 5 ? 1200 : amount >= 3 ? 1050 : 880;
+    const osc  = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(freq * 1.5, ac.currentTime + 0.07);
+    gain.gain.setValueAtTime(0.15, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.14);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.15);
+  } catch(e) {}
+}
 let tutorialScrollY   = 0;   // 0 = fully visible, -H = fully gone
 let tutorialScrolling = false;
 let countdownValue    = 3;
@@ -1369,9 +1387,26 @@ async function loadAllAssets() {
 }
 
 // ── Crafting ───────────────────────────────────────────────────
+function playCraftSound(id) {
+  try {
+    const ac = getAudioCtx();
+    const osc  = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.connect(gain); gain.connect(ac.destination);
+    // sharp crack for all buttons
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(440, ac.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(660, ac.currentTime + 0.06);
+    gain.gain.setValueAtTime(0.18, ac.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.12);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.12);
+  } catch(e) {}
+}
+
 function selectCraftItem(idx) {
   if (phase !== 'playing' || idx < 0 || idx >= CRAFT_ITEMS.length) return;
   const item = CRAFT_ITEMS[idx];
+  playCraftSound(item.id);
   if (item.id === 'torch') tombStage.craftRelightTorch();
   if (item.id === 'armor') tombStage.craftWrapWounds();
   if (item.id === 'sling') tombStage.craftStoneSling();
@@ -1516,17 +1551,17 @@ function drawCrosshair() {
   const hit   = hitFlash > 0;
   const boost = tombStage.aimBoosted;
   const r     = 24 * hitScale * (boost ? 2 : 1);
-  const color = hit ? '#ff8822' : boost ? '#ffdd00' : '#ffaa22';
-  const glow  = hit ? '#cc4400' : boost ? '#ff8800' : '#aa6600';
+  const color = hit ? '#ff4400' : boost ? '#ffff00' : '#00ffff';
+  const glow  = hit ? '#ff2200' : boost ? '#ffaa00' : '#00cccc';
 
   ctx.save();
-  ctx.shadowColor = glow; ctx.shadowBlur = hit ? 24 : 14;
-  ctx.strokeStyle = color; ctx.lineWidth = hit ? 3 : 2; ctx.globalAlpha = 0.90;
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
-  ctx.fillStyle = color; ctx.globalAlpha = 0.95;
-  ctx.beginPath(); ctx.arc(x, y, hit ? 6 : 4, 0, Math.PI * 2); ctx.fill();
-  const gap = r + 10, arm = gap + 22;
-  ctx.globalAlpha = 0.85; ctx.lineWidth = hit ? 2.5 : 2;
+  ctx.shadowColor = glow; ctx.shadowBlur = hit ? 40 : 30;
+  ctx.strokeStyle = color; ctx.lineWidth = hit ? 7 : 5; ctx.globalAlpha = 1;
+  ctx.beginPath(); ctx.arc(x, y, r * 1.4, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = color; ctx.globalAlpha = 1;
+  ctx.beginPath(); ctx.arc(x, y, hit ? 10 : 7, 0, Math.PI * 2); ctx.fill();
+  const gap = r * 1.4 + 12, arm = gap + 28;
+  ctx.globalAlpha = 1; ctx.lineWidth = hit ? 6 : 5;
   ctx.beginPath();
   ctx.moveTo(x - arm, y); ctx.lineTo(x - gap, y);
   ctx.moveTo(x + gap, y); ctx.lineTo(x + arm, y);
@@ -1742,14 +1777,19 @@ function drawVictory() {
   ctx.shadowColor = '#aa6600'; ctx.shadowBlur = 65;
   ctx.fillText('KHEPRI', W / 2, H / 2 - 300);
   ctx.fillText('DEFEATED!', W / 2, H / 2 - 170); ctx.shadowBlur = 0;
-  ctx.font = 'bold 60px "Arial Black", Arial'; ctx.fillStyle = '#FFD700';
-  ctx.shadowColor = '#886600'; ctx.shadowBlur = 28;
-  ctx.fillText(`FINAL SCORE  ${totalScore.toLocaleString()}`, W / 2, H / 2 - 50);
-  ctx.shadowBlur = 0;
-  ctx.font = 'bold 38px Arial'; ctx.fillStyle = '#ffddaa';
-  ctx.fillText('YOU SURVIVED 3 SWARMS — LEGEND OF THE TOMB', W / 2, H / 2 + 20);
-  ctx.font = 'bold 32px Arial'; ctx.fillStyle = '#FFD700';
-  ctx.fillText(`COINS REMAINING  ✦ ${tombStage.coins}`, W / 2, H / 2 + 82);
+  ctx.font = 'bold 36px Arial'; ctx.fillStyle = '#ffddaa';
+  ctx.fillText('FINAL SCORE', W / 2, H / 2 - 80);
+  ctx.font = 'bold 90px "Arial Black", Arial'; ctx.fillStyle = '#FFD700';
+  ctx.shadowColor = '#886600'; ctx.shadowBlur = 40;
+  ctx.fillText(totalScore.toLocaleString(), W / 2, H / 2 - 10); ctx.shadowBlur = 0;
+  if (bestScore >= totalScore) {
+    ctx.font = 'bold 32px Arial'; ctx.fillStyle = '#ffe066';
+    ctx.fillText('NEW BEST!', W / 2, H / 2 + 40);
+  }
+  ctx.font = 'bold 34px Arial'; ctx.fillStyle = '#ffddaa';
+  ctx.fillText('YOU SURVIVED 3 SWARMS  LEGEND OF THE TOMB', W / 2, H / 2 + 84);
+  ctx.font = 'bold 30px Arial'; ctx.fillStyle = '#FFD700';
+  ctx.fillText(`COINS REMAINING  ✦ ${tombStage.coins}`, W / 2, H / 2 + 126);
   const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 400);
   ctx.globalAlpha = pulse;
   ctx.font = 'bold 56px "Arial Black", Arial'; ctx.fillStyle = '#FFD700';
@@ -1767,10 +1807,17 @@ function drawGameOver() {
   ctx.fillText('CONSUMED!', W / 2, H / 2 - 220); ctx.shadowBlur = 0;
   ctx.font = 'bold 50px Arial'; ctx.fillStyle = '#ffddaa';
   ctx.fillText(`SWARM ${currentWave} OF 3`, W / 2, H / 2 - 100);
-  ctx.font = 'bold 56px Arial'; ctx.fillStyle = '#FFD700';
-  ctx.fillText(`SCORE  ${totalScore.toLocaleString()}`, W / 2, H / 2 - 20);
-  ctx.font = 'bold 36px Arial'; ctx.fillStyle = 'rgba(255,200,80,0.60)';
-  ctx.fillText(`COINS  ✦ ${tombStage.coins}`, W / 2, H / 2 + 58);
+  ctx.font = 'bold 80px "Arial Black", Arial'; ctx.fillStyle = '#FFD700';
+  ctx.shadowColor = '#884400'; ctx.shadowBlur = 30;
+  ctx.fillText(`${totalScore.toLocaleString()}`, W / 2, H / 2 - 10); ctx.shadowBlur = 0;
+  ctx.font = 'bold 34px Arial'; ctx.fillStyle = 'rgba(255,220,120,0.85)';
+  ctx.fillText('FINAL SCORE', W / 2, H / 2 - 68);
+  if (bestScore > totalScore) {
+    ctx.font = 'bold 30px Arial'; ctx.fillStyle = 'rgba(255,200,80,0.55)';
+    ctx.fillText(`BEST  ${bestScore.toLocaleString()}`, W / 2, H / 2 + 52);
+  }
+  ctx.font = 'bold 34px Arial'; ctx.fillStyle = 'rgba(255,200,80,0.55)';
+  ctx.fillText(`COINS  ✦ ${tombStage.coins}`, W / 2, H / 2 + (bestScore > totalScore ? 94 : 58));
   const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 400);
   ctx.globalAlpha = pulse;
   ctx.font = 'bold 52px "Arial Black", Arial'; ctx.fillStyle = '#FFD700';
@@ -1816,8 +1863,8 @@ function loop(now) {
           interwaveWaveJustDone = currentWave;
           interwaveTimer        = INTERWAVE_DURATION_MS;
           phase                 = 'interwave';
-        } else { phase = 'victory'; }
-      } else { phase = 'gameover'; }
+        } else { phase = 'victory'; bestScore = Math.max(bestScore, totalScore); }
+      } else { phase = 'gameover'; bestScore = Math.max(bestScore, totalScore); }
     }
   } else if (phase === 'interwave') {
     tombStage.render(ctx);
